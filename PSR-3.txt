@@ -1,0 +1,236 @@
+本文档为日志库描述了一份通用的接口。
+
+主要目标是允许库接收一个 Psr\Log\LoggerInterface 对象并且以一种简单而通用的方式向其写入日志。有自定义需求的框架和 CMS 可以出于自己的目的扩
+展该接口，但是应该与本文档保持兼容。这确保一个应用程序所使用的第三方库可以向中央应用程序日志中写入。
+
+本文档中的关键字“必须”，“不能”，“需要”，“将会”，“将不会”，“应该”，“不应该”，“推荐”，“可以”和“可选”是按照 RFC 2119 中的描述进行解释的。
+
+本文档中的 实现者 一词可以解释为在一个与日志相关的库或框架中实现 LoggerInterface 的人。日志记录器的用户称为 用户 。
+
+1. 规范
+    1.1 基础
+        LoggerInterface 公开了 8 个方法去向 8 个 RFC 5424 级别（debug，info，notice，warning，error，critical，alert，
+        emergency）写入日志。
+
+        第九个方法，log，接受一个日志级别作为第一个参数。使用某个日志级别的常量调用该方法必须与调用指定级别的方法具有相同的结果。使用一个没有
+        在本规范中定义的级别去调用该方法，如果实现不知道该级别的话，必须抛出一个 Psr\Log\InvalidArgumentException 。在不确定当前实现是否
+        支持的情况下，用户不应该使用一个自定义的级别。
+
+    1.2 消息
+        每个方法都接受一个字符串或一个带有 __toString() 方法的对象作为消息。实现者可以对传递的对象进行特殊处理。如果不是这样，实现者必须将其
+        转换为一个字符串。
+
+        消息中可以包含占位符，实现者可以用上下文数组中的值替换这些占位符。
+
+        占位符的名称必须与上下文数组中的键相对应。占位符的名称必须用一个左大括号 { 和一个右大括号 } 定界。定界符和占位符的名称之间不能有任何
+        的空白。
+
+        占位符的名称应该仅由字符 A-Z、a-z、0-9、下划线 _ 和句点 . 组成。其他字符的使用是为将来修改占位符的规范而保留的。
+
+        实现者可以使用占位符去实现各种转义策略和转换日志以供显示。用户不应该预转义占位符的值，因为他们不知道数据将在哪个上下文中显示。
+
+        下面是一个占位符插值的实现示例，目的仅供参考：
+            <?php
+
+            /**
+             * 将上下文值插入到消息占位符中。
+             */
+            function interpolate($message, array $context = array())
+            {
+                // 用大括号围绕上下文键构建一个替换数组
+                $replace = array();
+                foreach ($context as $key => $val) {
+                    // 检查该值是否可以转换为字符串
+                    if (!is_array($val) && (!is_object($val) || method_exists($val, '__toString'))) {
+                        $replace['{' . $key . '}'] = $val;
+                    }
+                }
+
+                // 插入替换值到消息中然后返回
+                return strtr($message, $replace);
+            }
+
+            // 一条带有花括号定界的占位符名称的消息
+            $message = "User {username} created";
+
+            // 一个 占位符名称 => 替换值 的上下文数组
+            $context = array('username' => 'bolivar');
+
+            // 输出 "User bolivar created"
+            echo interpolate($message, $context);
+    1.3 上下文
+        每个方法都接受一个数组作为上下文数据。该数组的目的是去持有不适合在一个字符串中的任何无关信息。数组中能够包含任何内容。实现者必须确保尽
+        可能宽松地对待上下文数据。上下文中的某个给定值不能抛出一个异常，也不能引发任何 php 错误、警告或通知。
+
+        如果一个 Exception 对象被传递进了上下文数据中，它必须在“exception”键中。记录异常是一种常见的模式并且这允许实现者在日志后端支持时，
+        从异常中提取一个堆栈追踪。在这么使用之前，实现者仍然必须验证“exception”键实际上是一个 Exception，因为它可以包含任何内容。
+
+    1.4 辅助类和接口
+        Psr\Log\AbstractLogger 类让你非常轻松的实现 LoggerInterface ，通过扩展它和实现通用的 log 方法。其他 8 个方法将消息和上下文转
+        发给它。
+
+        同样的，使用 Psr\Log\LoggerTrait 仅需要你去实现通用的 log 方法。注意，由于特性不能实现接口，所以在这种情况下，你仍然需要实现
+        LoggerInterface 。
+
+        Psr\Log\NullLogger 与该接口一起提供。如果没有提供日志记录器，接口的用户可以使用它去提供一个后备的“黑洞”实现。然而，如果创建上下文
+        数据的开销很大，那么有条件的日志记录可能是一种更好的方法。
+
+        Psr\Log\LoggerAwareInterface 仅包含一个 setLogger(LoggerInterface $logger) 方法并且可以被框架使用去自动装配任意的、带有一
+        个日志记录器的实例。
+
+        Psr\Log\LoggerAwareTrait 特性能够用于在任何类中轻松的实现等效的接口。它能让你访问 $this->logger 。
+
+        Psr\Log\LogLevel 类持有八个日志级别的常量。
+
+2. 包
+    所描述的接口和类以及相关的异常类和一个去验证实现的测试套件都是作为 psr/log 这个包的一部分被提供的。
+
+3. Psr\Log\LoggerInterface
+    <?php
+
+    namespace Psr\Log;
+
+    /**
+     * 描述一个日志记录器的实例。
+     *
+     * 消息必须是一个字符串或者实现了 __toString() 的对象。
+     *
+     * 消息可以包含这种形式的占位符：{foo} ，其中 foo 将被键为“foo”的上下文数据替换。
+     *
+     * 上下文数组能包含任意数据，实现者唯一可以做的假设是：如果提供一个 Exception 实例去生成堆栈追踪，那么它必须位
+     * 于一个名为“exception”的键中。
+     *
+     * 查看 https://github.com/php-fig/fig-standards/blob/master/accepted/PSR-3-logger-interface.md
+     * 了解完整的接口规范。
+     */
+    interface LoggerInterface
+    {
+        /**
+         * 系统不可用。
+         *
+         * @param string $message
+         * @param array $context
+         * @return void
+         */
+        public function emergency($message, array $context = array());
+
+        /**
+         * 必须立刻采取行动。
+         *
+         * 例子: 整个网站宕机，数据库不可用，等等。这应该触发短消息提醒并且唤醒你。
+         *
+         * @param string $message
+         * @param array $context
+         * @return void
+         */
+        public function alert($message, array $context = array());
+
+        /**
+         * 临界条件。
+         *
+         * 例子：应用程序组件不可用，意想不到的异常。
+         *
+         * @param string $message
+         * @param array $context
+         * @return void
+         */
+        public function critical($message, array $context = array());
+
+        /**
+         * 不需要立刻行动，但通常应该记录并监视的运行时错误。
+         *
+         * @param string $message
+         * @param array $context
+         * @return void
+         */
+        public function error($message, array $context = array());
+
+        /**
+         * 不是错误的异常事件。
+         *
+         * 例子: 使用废弃的 APIs，一个使用不当的 API，不一定是错误的不受欢迎的事件。
+         *
+         * @param string $message
+         * @param array $context
+         * @return void
+         */
+        public function warning($message, array $context = array());
+
+        /**
+         * 正常但重要的事件。
+         *
+         * @param string $message
+         * @param array $context
+         * @return void
+         */
+        public function notice($message, array $context = array());
+
+        /**
+         * 感兴趣的事件。
+         *
+         * 例子：用户登录，SQL 日志。
+         *
+         * @param string $message
+         * @param array $context
+         * @return void
+         */
+        public function info($message, array $context = array());
+
+        /**
+         * 详细的调试信息。
+         *
+         * @param string $message
+         * @param array $context
+         * @return void
+         */
+        public function debug($message, array $context = array());
+
+        /**
+         * 记录任何一种级别的日志。
+         *
+         * @param mixed $level
+         * @param string $message
+         * @param array $context
+         * @return void
+         */
+        public function log($level, $message, array $context = array());
+    }
+
+4. Psr\Log\LoggerAwareInterface
+    <?php
+
+    namespace Psr\Log;
+
+    /**
+     * 描述了一个感知日志记录器的实例。
+     */
+    interface LoggerAwareInterface
+    {
+        /**
+         * 在对象上设置一个日志记录器的实例。
+         *
+         * @param LoggerInterface $logger
+         * @return void
+         */
+        public function setLogger(LoggerInterface $logger);
+    }
+
+5. Psr\Log\LogLevel
+    <?php
+
+    namespace Psr\Log;
+
+    /**
+     * 描述了日志级别。
+     */
+    class LogLevel
+    {
+        const EMERGENCY = 'emergency';
+        const ALERT     = 'alert';
+        const CRITICAL  = 'critical';
+        const ERROR     = 'error';
+        const WARNING   = 'warning';
+        const NOTICE    = 'notice';
+        const INFO      = 'info';
+        const DEBUG     = 'debug';
+    }
