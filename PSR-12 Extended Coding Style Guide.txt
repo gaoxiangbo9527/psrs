@@ -1,0 +1,785 @@
+本文档中的关键字“必须”，“不能”，“需要”，“将会”，“将不会”，“应该”，“不应该”，“推荐”，“可以”和“可选”是按照 RFC 2119 中的描
+述进行解释的。
+
+概览
+  该规范继承、扩展和替代了 PSR-2，即编程风格指南，并要求遵守 PSR-1，即基础编程规范。
+  
+  与 PSR-2 一样，该规范的目的是在扫描来自不同作者的代码时减少认知摩擦。它通过列举一组关于如何格式化 PHP 代码的共享规则和
+  期望来做到这一点。这份 PSR 力图提供一套让编程风格工具可以实现，让项目可以声明去遵循，并且让开发人员可以很容易的在不同
+  的项目之间建立联系的方法。当各种各样的作者跨多个项目协作时，在这些所有的项目之间有一套指南是有帮助的。因此，这份指南的
+  好处不在与这些规则本身，而在于分享这些规则。
+  
+  PSR-2 在 2012 年被接受并且从那时起 PHP 发生了很多的变化，这对编程风格指南有影响。虽然在编写本文时，PSR-2 非常全面地介
+  绍了现有的 PHP 功能，但新功能对解释持开放态度。因此，这份 PSR 试图在更现代的环境中使用可用的新功能来阐明 PSR-2 的内容，
+  并使用勘误表与 PSR-2 绑定。
+  
+  以前的语言版本
+    本文档中的任何说明，如果不存在于你的项目所支持的 PHP 版本中，均可以被忽略。
+  
+  示例
+    这个例子包含了下面的一些规则，作为一个快速的概述：
+      <?php
+
+      declare(strict_types=1);
+
+      namespace Vendor\Package;
+
+      use Vendor\Package\{ClassA as A, ClassB, ClassC as C};
+      use Vendor\Package\SomeNamespace\ClassD as D;
+
+      use function Vendor\Package\{functionA, functionB, functionC};
+
+      use const Vendor\Package\{ConstantA, ConstantB, ConstantC};
+
+      class Foo extends Bar implements FooInterface
+      {
+          public function sampleFunction(int $a, int $b = null): array
+          {
+              if ($a === $b) {
+                  bar();
+              } elseif ($a > $b) {
+                  $foo->bar($arg1);
+              } else {
+                  BazClass::bar($arg2, $arg3);
+              }
+          }
+
+          final public static function bar()
+          {
+              // method body
+          }
+      }
+  
+2. 一般的（风格）
+  2.1 基础编程规范
+    代码必须遵循 PSR-1 中列出的所有规则。
+    
+    PSR-1 中的术语 StudlyCaps 必须被解释为 PascalCase，即每个单词的首字母大写，包括第一个字母。
+    
+  2.2 文件
+    所有 PHP 文件必须只使用 Unix LF 行结束符。
+    
+    所有 PHP 文件必须以一个非空行结束，该行用单个 LF 结束。
+    （其实这么一来视觉上的最后一行就是一个空行，这和其他规范中说要以一个空行结束文件其实是一致的，只是说法不一样）
+    
+    在仅包含 PHP 的文件中，结束的 ?> 标签必须被省略。
+    
+  2.3 行
+    行长度不能有硬性限制。
+    
+    行长度的软限制必须是 120 个字符。
+    
+    行不应该长于 80 个字符；长于 80 个字符的行应该被拆分成每行不多于 80 个字符的多个后续行。
+    
+    行尾不能有尾随的空白符。
+    
+    可以添加空行以提高可读性和指示相关的代码块，除非明确禁止。
+    
+    每行不能有一条以上的语句。
+    
+  2.4 缩进
+    对于每个缩进层级，代码必须使用 4 个空格的缩进，并且不能使用制表符进行缩进。
+    
+  2.5 关键字和类型
+    所有 PHP 保留关键字和类型必须是小写形式。
+    
+    任何被添加到将来 PHP 版本中的新类型和关键字必须是小写形式。
+    
+    必须使用类型关键字的缩写形式。比如，用 bool 代替 boolean，用 int 代替 integer 等。
+
+3. 声明语句，命名空间和导入语句
+  一个 PHP 文件的头部可以由若干不同的块组成。如果存在，这些块中的每个块的下方必须使用单个空行分隔，并且这些块中不能包含
+  空行。每个块必须按照下面列出的顺序排列，但不相关的块可以省略。
+  
+    开始的 <?php 标签。
+    文件级的文档块。
+    一条或者多条 declare 语句。
+    文件的命名空间声明。
+    一条或者多条基于类的 use 导入语句。
+    一条或者多条基于函数的 use 导入语句。
+    一条或者多条基于常量的 use 导入语句。
+    文件中的其余代码。
+    
+  当一个文件包含了 HTML 和 PHP 的混合时，以上任何一部分仍然是可以被使用的。如果是这样，它们必须出现在文件的顶部，即使其
+  余代码是由一个结束的 PHP 标签，然后是 HTML 和 PHP 的混合组成。
+  
+  当开始的 <?php 标签位于文件的第一行时，在它自己的行上必须没有其他的语句，除非该文件在 PHP 开始和结束标签外还包含标记。
+  
+  导入语句必须不能以反斜杠开头，因为它们必须总是完全限定的。
+  
+  下面的例子演示了一份所有块的完整列表:
+    <?php
+
+    /**
+     * This file contains an example of coding styles.
+     */
+
+    declare(strict_types=1);
+
+    namespace Vendor\Package;
+
+    use Vendor\Package\{ClassA as A, ClassB, ClassC as C};
+    use Vendor\Package\SomeNamespace\ClassD as D;
+    use Vendor\Package\AnotherNamespace\ClassE as E;
+
+    use function Vendor\Package\{functionA, functionB, functionC};
+    use function Another\Vendor\functionD;
+
+    use const Vendor\Package\{CONSTANT_A, CONSTANT_B, CONSTANT_C};
+    use const Another\Vendor\CONSTANT_D;
+
+    /**
+     * FooBar is an example class.
+     */
+    class FooBar
+    {
+        // ... additional PHP code ...
+    }
+    
+  一定不能使用深度超过两级的复合命名空间。因此，以下是允许的最大复合深度:
+    <?php
+
+    use Vendor\Package\SomeNamespace\{
+        SubnamespaceOne\ClassA,
+        SubnamespaceOne\ClassB,
+        SubnamespaceTwo\ClassY,
+        ClassZ,
+    };
+  并且以下内容是不允许的:
+    <?php
+
+    use Vendor\Package\SomeNamespace\{
+        SubnamespaceOne\AnotherNamespace\ClassA,
+        SubnamespaceOne\ClassB,
+        ClassZ,
+    };
+    
+  当希望在 PHP 开始和结束标签之外包含了标记的文件中声明严格类型时，该声明必须位于文件的第一行并且包含一个开始 PHP 标签，
+  严格类型声明和结束标签。
+  
+  比如：
+    <?php declare(strict_types=1) ?>
+    <html>
+    <body>
+        <?php
+            // ... additional PHP code ...
+        ?>
+    </body>
+    </html>
+    
+  declare 语句必须不包含空格并且必须准确的是 declare(strict_types=1)（带有一个可选的结束分号）。
+  
+  允许使用块 declare 语句并且必须按照以下格式被格式化。注意花括号和空格的位置：
+    declare(ticks=1) {
+        // some code
+    }
+    
+4. 类，属性和方法
+  术语“类”指的是所有的类、接口和特性。
+  
+  任何结束的花括号不能在同一行上跟着任何的注释或者语句。
+  
+  实例化一个新的类时，圆括号必须总是出现，即使没有参数传递给构造方法。
+    new Foo();
+  
+  4.1 继承和实现
+    extends 和 implements 关键字必须和类名声明在同一行上。
+    
+    类的开始花括号必须在它自己的行上；类的结束花括号必须在类体之后的下一行上。
+    
+    开始花括号必须在它自己的行上并且不能在前面或后面有空白行。
+    
+    结束花括号必须在它自己的行上并且前面不能有空白行。
+      <?php
+
+      namespace Vendor\Package;
+
+      use FooClass;
+      use BarClass as Bar;
+      use OtherVendor\OtherPackage\BazClass;
+
+      class ClassName extends ParentClass implements \ArrayAccess, \Countable
+      {
+          // constants, properties, methods
+      }
+      
+    在实现多个接口的情况下，implements 列表和 extends 可以被分割成多行，并且后续的每行会缩进一次。当这么做时，列表中的第
+    一项必须位于下一行，并且每一行上只能有一个接口。
+      <?php
+
+      namespace Vendor\Package;
+
+      use FooClass;
+      use BarClass as Bar;
+      use OtherVendor\OtherPackage\BazClass;
+
+      class ClassName extends ParentClass implements
+          \ArrayAccess,
+          \Countable,
+          \Serializable
+      {
+          // constants, properties, methods
+      }
+    
+  4.2 使用特性
+    在类中为了实现特性而使用的 use 关键字必须被声明在开始花括号的下一行。
+      <?php
+
+      namespace Vendor\Package;
+
+      use Vendor\Package\FirstTrait;
+
+      class ClassName
+      {
+          use FirstTrait;
+      }
+    
+    导入到类中的每个单独的特性必须每行包含一个并且每个包含必须有它自己的 use 导入语句。
+      <?php
+
+      namespace Vendor\Package;
+
+      use Vendor\Package\FirstTrait;
+      use Vendor\Package\SecondTrait;
+      use Vendor\Package\ThirdTrait;
+
+      class ClassName
+      {
+          use FirstTrait;
+          use SecondTrait;
+          use ThirdTrait;
+      }
+    
+    如果在 use 导入语句之后，类没有任何内容，则类的结束花括号必须在该 use 导入语句的下一行。
+      <?php
+
+      namespace Vendor\Package;
+
+      use Vendor\Package\FirstTrait;
+
+      class ClassName
+      {
+          use FirstTrait;
+      }
+    否者的话，在该 use 导入语句后必须有一个空行。
+      <?php
+
+      namespace Vendor\Package;
+
+      use Vendor\Package\FirstTrait;
+
+      class ClassName
+      {
+          use FirstTrait;
+
+          private $property;
+      }
+      
+    当使用 insteadof 和 as 操作符时，它们必须像下面这样使用，注意缩进、空格和换行。
+      <?php
+
+      class Talker
+      {
+          use A;
+          use B {
+              A::smallTalk insteadof B;
+          }
+          use C {
+              B::bigTalk insteadof C;
+              C::mediumTalk as FooBar;
+          }
+      }
+      
+  4.3 属性和常量
+    在所有的属性上必须声明可见性。
+    
+    如果你的项目的最低 PHP 版本支持常量可见性（PHP 7.1 或更新），那么在所有的常量上必须声明可见性。
+    
+    不能使用 var 关键字去声明一个属性。
+    
+    每条语句中不能声明一个以上的属性。
+    
+    属性名不能使用单下划线前缀去表示被保护的或者私有的可见性。也就是说，显式地使用下划线前缀没有意义。
+    
+    类型声明和属性名之间必须有一个空格。
+    
+    一个属性声明看上去如下所示：
+      <?php
+
+      namespace Vendor\Package;
+
+      class ClassName
+      {
+          public $foo = null;
+          public static int $bar = 0;
+      }
+      
+  4.4 方法和函数
+    在所有的方法上必须声明可见性。
+    
+    方法名不能使用单下划线前缀去表示被保护的或者私有的可见性。也就是说，显式地使用下划线前缀没有意义。
+    
+    方法名和函数名不能被声明为在名称之后带有空格。开始花括号必须在它自己的行上，并且结束花括号必须在函数体后的下一行上。
+    开始圆括号之后不能有空格，并且结束圆括号之前不能有空格。
+    
+    一个方法声明看上去如下所示。注意圆括号，逗号，空格和花括号的位置：
+      <?php
+
+      namespace Vendor\Package;
+
+      class ClassName
+      {
+          public function fooBarBaz($arg1, &$arg2, $arg3 = [])
+          {
+              // method body
+          }
+      }
+      
+    一个函数声明看上去如下所示。注意圆括号，逗号，空格和花括号的位置：
+      <?php
+
+      function fooBarBaz($arg1, &$arg2, $arg3 = [])
+      {
+          // function body
+      }
+      
+  4.5 方法和函数的参数
+    在参数列表中，在每个逗号前不能有空格，并且在每个逗号后必须有一个空格。
+    
+    带有默认值的方法和函数参数必须位于参数列表的最后。
+      <?php
+
+      namespace Vendor\Package;
+
+      class ClassName
+      {
+          public function foo(int $arg1, &$arg2, $arg3 = [])
+          {
+              // method body
+          }
+      }
+      
+    参数列表可以被拆分成多行，后续的每一行都要缩进一次。这么做时，列表中的第一项必须在下一行上，并且每一行必须只能有一个
+    参数。
+    当参数列表拆分成多行时，结束的圆括号和开始的花括号必须被一起放在它们自己的行上，并且它们之间有一个空格。
+      <?php
+
+      namespace Vendor\Package;
+
+      class ClassName
+      {
+          public function aVeryLongMethodName(
+              ClassTypeHint $arg1,
+              &$arg2,
+              array $arg3 = []
+          ) {
+              // method body
+          }
+      }
+    
+    当有一个返回类型声明时，在冒号后必须有一个空格，然后跟着类型声明。冒号和声明与参数列表的结束圆括号必须在同一行上，并
+    且两个字符之间没有空格（指的是结束圆括号和冒号之间）。
+      <?php
+
+      declare(strict_types=1);
+
+      namespace Vendor\Package;
+
+      class ReturnTypeVariations
+      {
+          public function functionName(int $arg1, $arg2): string
+          {
+              return 'foo';
+          }
+
+          public function anotherFunction(
+              string $foo,
+              string $bar,
+              int $baz
+          ): string {
+              return 'foo';
+          }
+      }
+    
+    在可为空的类型声明中，在问号和类型之间不能有空格。
+      <?php
+
+      declare(strict_types=1);
+
+      namespace Vendor\Package;
+
+      class ReturnTypeVariations
+      {
+          public function functionName(?string $arg1, ?int &$arg2): ?string
+          {
+              return 'foo';
+          }
+      }
+    当在一个参数前使用引用操作符 & 时，在该操作符后不能有空格，就像前面的例子中那样。
+    
+    在可变参数三点操作符和参数名之间不能有空格。
+      public function process(string $algorithm, ...$parts)
+      {
+          // processing
+      }
+      
+    当结合引用操作符和可变参数三点操作符时，在它们中间不能有任何空格。
+      public function process(string $algorithm, &...$parts)
+      {
+          // processing
+      }
+    
+  4.6 abstract，final 和 static
+    如果出现，abstract 和 final 声明必须位于可见性声明之前。
+    
+    如果出现，static 声明必须出现在可见性声明之后。
+    
+      <?php
+
+      namespace Vendor\Package;
+
+      abstract class ClassName
+      {
+          protected static $foo;
+
+          abstract protected function zim();
+
+          final public static function bar()
+          {
+              // method body
+          }
+      }
+      
+  4.7 方法和函数的调用
+    当进行一个方法或者函数调用时，在方法名或函数名同开始的圆括号之间不能有空格。在开始的圆括号后不能有空格，并且在结束的
+    圆括号之前不能有空格。在参数列表中，在每个逗号前不能有空格，并且在每个逗号后必须有一个空格。
+      <?php
+
+      bar();
+      $foo->bar($arg1);
+      Foo::bar($arg2, $arg3);
+      
+    参数列表可以被拆分成多行，后续的每一行都要缩进一次。这么做时，列表中的第一项必须在下一行上，并且每一行必须只能有一个
+    参数。单个参数被拆分成多行（就比如是一个匿名函数或数组的情况）不会构成拆分参数列表本身。
+      <?php
+
+      $foo->bar(
+          $longArgument,
+          $longerArgument,
+          $muchLongerArgument
+      );
+      
+      <?php
+
+      somefunction($foo, $bar, [
+        // ...
+      ], $baz);
+
+      $app->get('/hello/{name}', function ($name) use ($app) {
+          return 'Hello ' . $app->escape($name);
+      });
+
+5. 控制结构
+  控制结构的一般风格规则如下：
+    在控制结构关键字后必须有一个空格。
+    在开始的圆括号后不能有空格。
+    在结束的圆括号前不能有空格。
+    在结束的圆括号和开始的花括号之间必须有一个空格。
+    结构主体必须缩进一次。
+    主体必须在开始花括号的下一行。
+    结束花括号必须在主体的下一行。
+  每一个控制结构的主体必须被花括号对包围。这标准化了结构的外观，并减少了在添加新行时引入错误的可能性。
+  
+  5.1 if，elseif，else
+    一个 if 结构看起来像下面这样。注意圆括号、空格和花括号的位置；并且 else 和 elseif 同前一个主体的结束花括号在同一行上。
+      <?php
+
+      if ($expr1) {
+          // if body
+      } elseif ($expr2) {
+          // elseif body
+      } else {
+          // else body;
+      }
+    
+    应该使用关键字 elseif 而不是 else if ，从而所有的控制关键字看起来都像是一个词。
+    
+    圆括号中的表达式可以被拆分成多行，后续的每一行都要至少缩进一次。这么做时，第一个条件必须在下一行上。结束的圆括号和开
+    始的花括号必须被一起放在它们自己的行上面，并且它们之间有一个空格。条件之间的布尔操作符必须总是放在行的开始或结束位置
+    ，不能混合二者。
+      <?php
+
+      if (
+          $expr1
+          && $expr2
+      ) {
+          // if body
+      } elseif (
+          $expr3
+          && $expr4
+      ) {
+          // elseif body
+      }
+      
+  5.2 switch，case
+    一个 switch 结构看起来像下面这样。注意圆括号、空格和花括号的位置。case 语句必须相对 switch 缩进一次，并且 break 关键
+    字（或者其他的终止关键字）必须被缩进到和 case 主体相同的级别。在非空的 case 主体中，当故意继续时，必须有一个类似 
+    // no break 这样的注释。
+      <?php
+
+      switch ($expr) {
+          case 0:
+              echo 'First case, with a break';
+              break;
+          case 1:
+              echo 'Second case, which falls through';
+              // no break
+          case 2:
+          case 3:
+          case 4:
+              echo 'Third case, return instead of break';
+              return;
+          default:
+              echo 'Default case';
+              break;
+      }
+      
+    圆括号中的表达式可以被拆分成多行，后续的每一行都要至少缩进一次。这么做时，第一个条件必须在下一行上。结束的圆括号和开
+    始的花括号必须被一起放在它们自己的行上面，并且它们之间有一个空格。条件之间的布尔操作符必须总是放在行的开始或结束位置
+    ，不能混合二者。
+      <?php
+
+      switch (
+          $expr1
+          && $expr2
+      ) {
+          // structure body
+      }
+  
+  5.3 while，do while
+    一个 while 语句看起来像下面这样。注意圆括号、空格和花括号的位置。
+      <?php
+
+      while ($expr) {
+          // structure body
+      }
+      
+    圆括号中的表达式可以被拆分成多行，后续的每一行都要至少缩进一次。这么做时，第一个条件必须在下一行上。结束的圆括号和开
+    始的花括号必须被一起放在它们自己的行上面，并且它们之间有一个空格。条件之间的布尔操作符必须总是放在行的开始或结束位置
+    ，不能混合二者。
+      <?php
+
+      while (
+          $expr1
+          && $expr2
+      ) {
+          // structure body
+      }
+      
+    类似的，一个 do while 语句看起来像下面这样。注意圆括号、空格和花括号的位置。
+      <?php
+
+      do {
+          // structure body;
+      } while ($expr);
+      
+    圆括号中的表达式可以被拆分成多行，后续的每一行都要至少缩进一次。这么做时，第一个条件必须在下一行上。结束的圆括号和开
+    始的花括号必须被一起放在它们自己的行上面，并且它们之间有一个空格。条件之间的布尔操作符必须总是放在行的开始或结束位置
+    ，不能混合二者。
+      <?php
+
+      do {
+          // structure body;
+      } while (
+          $expr1
+          && $expr2
+      );
+    
+  5.4 for
+    一个 for 语句看起来像下面这样。注意圆括号、空格和花括号的位置。
+      <?php
+
+      for ($i = 0; $i < 10; $i++) {
+          // for body
+      }
+      
+    圆括号中的表达式可以被拆分成多行，后续的每一行都要至少缩进一次。这么做时，第一个表达式必须在下一行上。结束的圆括号和
+    开始的花括号必须被一起放在它们自己的行上面，并且它们之间有一个空格。
+      <?php
+
+      for (
+          $i = 0;
+          $i < 10;
+          $i++
+      ) {
+          // for body
+      }
+    
+  5.5 foreach
+    一个 foreach 语句看起来像下面这样。注意圆括号、空格和花括号的位置。
+      <?php
+
+      foreach ($iterable as $key => $value) {
+          // foreach body
+      }
+    
+  5.6 try，catch，finally
+    一个 try-catch-finally 块看起来像下面这样。注意圆括号、空格和花括号的位置。
+      <?php
+
+      try {
+          // try body
+      } catch (FirstThrowableType $e) {
+          // catch body
+      } catch (OtherThrowableType | AnotherThrowableType $e) {
+          // catch body
+      } finally {
+          // finally body
+      }
+
+6. 操作符
+  操作符的风格规则是按参数数量（接受的操作数的数量）分组的。
+  
+  当一个操作符周围允许有空格时，为了便于阅读，可以使用多个空格。
+  
+  这里没有描述到的所有操作符都是剩下的、没有被定义的。
+  
+  6.1 一元运算符
+    在递增、递减操作符和操作数之间不能有任何的空格。
+      $i++;
+      ++$j;
+      
+    类型转换操作符的圆括号中不能有任何的空格。
+      $intValue = (int) $input;
+      
+  6.2 二元运算符
+    所有二元的数学、比较、赋值、位、逻辑、字符串和类型操作符的前后至少有一个空格。
+      if ($a === $b) {
+          $foo = $bar ?? $a ?? $b;
+      } elseif ($a > $b) {
+          $foo = $a + $b * $c;
+      }
+      
+  6.3 三元运算符
+    条件运算符，也被称为三元运算符，在 ? 和 : 字符的前后都必须至少有一个空格。
+      $variable = $foo ? 'foo' : 'bar';
+    
+    当条件运算符中间的操作数被省略时，该运算符必须遵循同其他二元运算符一样的风格规则。
+      $variable = $foo ?: 'bar';
+      
+7. 闭包
+  闭包必须被声明为在 function 关键字后带有一个空格，并且在 use 关键字的前后也要各有一个空格。
+  
+  开始的花括号必须再同一行上，并且结束花括号必须在主体后的下一行。
+  
+  在参数列表或者变量列表的开始的圆括号之后不能有空格，并且在参数列表或者变量列表的结束圆括号之前不能有空格。
+  
+  在参数列表和变量列表中，在每个逗号前不能有空格，并且在每个逗号后必须有一个空格。
+  
+  带有默认值的闭包参数必须位于参数列表的最后。
+  
+  如果存在返回类型，则它必须遵循同常规函数和方法相同的规则；如果存在 use 关键字，冒号必须跟在 use 列表的结束圆括号的后面
+  ，并且它们之间没有空格。
+  
+  一个闭包声明看起来像下面这样。注意圆括号、空格和花括号的位置：
+    <?php
+
+    $closureWithArgs = function ($arg1, $arg2) {
+        // body
+    };
+
+    $closureWithArgsAndVars = function ($arg1, $arg2) use ($var1, $var2) {
+        // body
+    };
+
+    $closureWithArgsVarsAndReturn = function ($arg1, $arg2) use ($var1, $var2): bool {
+        // body
+    };
+    
+  参数列表和变量列表可以被拆分成多行，后续的每一行都要缩进一次。这么做时，第一项必须在下一行上，并且每一行中必须仅有一个
+  参数或者变量。
+  
+  当最后的列表（不论是参数列表还是变量列表）被拆分成多行时，结束的圆括号和开始的花括号必须被一起放在它们自己的行上，并且
+  它们之间有一个空格。
+  
+  下面是带有和不带有拆分成多行的参数列表和变量列表的闭包示例。
+    <?php
+
+    $longArgs_noVars = function (
+        $longArgument,
+        $longerArgument,
+        $muchLongerArgument
+    ) {
+       // body
+    };
+
+    $noArgs_longVars = function () use (
+        $longVar1,
+        $longerVar2,
+        $muchLongerVar3
+    ) {
+       // body
+    };
+
+    $longArgs_longVars = function (
+        $longArgument,
+        $longerArgument,
+        $muchLongerArgument
+    ) use (
+        $longVar1,
+        $longerVar2,
+        $muchLongerVar3
+    ) {
+       // body
+    };
+
+    $longArgs_shortVars = function (
+        $longArgument,
+        $longerArgument,
+        $muchLongerArgument
+    ) use ($var1) {
+       // body
+    };
+
+    $shortArgs_longVars = function ($arg) use (
+        $longVar1,
+        $longerVar2,
+        $muchLongerVar3
+    ) {
+       // body
+    };
+    
+  注意，当闭包在一个函数或者方法调用中被直接用作一个参数时，这些格式化规则仍然适用。
+    <?php
+
+    $foo->bar(
+        $arg1,
+        function ($arg2) use ($var1) {
+            // body
+        },
+        $arg3
+    );
+  
+8. 匿名类
+  匿名类必须遵循和上一节中的闭包相同的指南和原则。
+    <?php
+
+    $instance = new class {};
+    
+  开始的花括号可以和 class 关键字在同一行上，只要 implements 的接口列表没有进行换行。如果接口列表换行了，该花括号必须被
+  放在最后一个接口后紧接着的行上。
+    <?php
+
+    // Brace on the same line
+    $instance = new class extends \Foo implements \HandleableInterface {
+        // Class content
+    };
+
+    // Brace on the next line
+    $instance = new class extends \Foo implements
+        \ArrayAccess,
+        \Countable,
+        \Serializable
+    {
+        // Class content
+    };

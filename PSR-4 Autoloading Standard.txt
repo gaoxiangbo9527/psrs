@@ -1,0 +1,35 @@
+本文档中的关键字“必须”，“不能”，“需要”，“将会”，“将不会”，“应该”，“不应该”，“推荐”，“可以”和“可选”是按照 RFC 2119 中的描
+述进行解释的。
+
+1. 概览
+  这份 PSR 描述了一个从文件路径自动加载类的规范。它是完全互操作的，可以用作任何其他自动加载规范的补充，包括 PSR-0 。该
+  PSR 还描述了将根据该规范被自动加载的文件所放置的位置。
+  
+2. 规范
+  1. 术语“类”指的是类、接口、特性和其他相似的结构。
+  2. 一个全限定的类名具有以下形式：
+    \<NamespaceName>(\<SubNamespaceNames>)*\<ClassName>
+    1. 全限定的类名必须有一个顶级命名空间名，也被称为一个“供应商命名空间”。
+    2. 全限定的类名可以有一个或者多个子命名空间名。
+    3. 全限定的类名必须有一个终止类名。
+    4. 下划线在全限定的类名的任何部分中都没有特殊意义。
+    5. 全限定类名中的字母字符可以是任何大小写的组合。
+    6. 所有类名必须以大小写敏感的方式被引用。
+  3. 当加载一个与全限定的类名对应的文件时…
+    1. 在全限定的类名中的一个或多个连续的前导命名空间和子命名空间名，不包括开头的命名空间的分隔符，即一个“命名空间前缀”，
+       至少对应一个“基目录”。
+    2. 在“命名空间前缀”后的连续的子命名空间对应着一个“基目录”中的子目录，其中命名空间分隔符表示目录分隔符。子目录名必须
+       匹配子命名空间名的大小写形式。
+    3. 终止类名对应着一个以 .php 结尾的文件名。文件名必须匹配终止类名的大小写形式。
+  4. 自动加载器的实现不能抛出异常，不能引发任何级别的错误，也不应该返回值。
+
+3. 示例
+  下表显示了同给定的全限定的类名、命名空间前缀和基目录对应的文件路径。
+  
+  FULLY QUALIFIED CLASS NAME    NAMESPACE PREFIX    BASE DIRECTORY          RESULTING FILE PATH
+  \Acme\Log\Writer\File_Writer  Acme\Log\Writer	    ./acme-log-writer/lib/	./acme-log-writer/lib/File_Writer.php
+  \Aura\Web\Response\Status	    Aura\Web	          /path/to/aura-web/src/	/path/to/aura-web/src/Response/Status.php
+  \Symfony\Core\Request	        Symfony\Core	      ./vendor/Symfony/Core/	./vendor/Symfony/Core/Request.php
+  \Zend\Acl	                    Zend	              /usr/includes/Zend/	    /usr/includes/Zend/Acl.php
+  
+  对于符合规范的自动加载器的示例实现，请查看示例文件。示例实现不能被视为规范的一部分，并且可能随时更改。

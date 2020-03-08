@@ -1,0 +1,4 @@
+弃用 —— 从 2014-10-21 起 PSR-0 已被标记为弃用。现在推荐使用 PSR-4 作为替代。
+
+因为 PSR-0 已经被废弃，而且被 PSR-4 所替代，所以这里没有翻译，如果真的需要阅读 PSR-4 ，请阅读英文原文或者请阅读链接 
+https://learnku.com/docs/psr/psr-0-automatic-loading-specification/1603 中的翻译内容。
