@@ -1,0 +1,214 @@
+此文档为缓存项目和缓存驱动程序描述了一个简单且可扩展的接口。
+
+本文档中的关键字“必须”，“不能”，“需要”，“将会”，“将不会”，“应该”，“不应该”，“推荐”，“可以”和“可选”是按照 RFC 2119 中的描述进行解释的。
+
+最终的实现可能会用比提议的功能更多的功能来装饰对象，但是它们必须先去实现指定的接口/功能。
+
+1.1 介绍
+    缓存是提高任何项目性能的一种常见方法，这使缓存库成为许多框架和库最常见的特性之一。这个级别的互操作性意味着库可以放弃自己的缓存实现，而轻
+    松地依赖框架提供给它们的缓存实现，或者另一个专用的缓存库。
+
+    PSR-6 已经解决了这个问题，但是对于最简单用例的需求来说，这是一种过于正式和详细的方式。这种更简单的方法旨在为常见情况构建一套标准化的流线
+    型接口。它独立于 PSR-6，但被设计成尽可能直截了当的与 PSR-6 兼容。
+
+1.2 定义
+    调用库、实现库、TTL、过期和键的定义是从 PSR-6 拷贝过来的，因为同样的假设是正确的。
+
+    调用库 —— 实际需要缓存服务的库或者代码。这个库会利用实现了此标准接口的缓存服务，但是却不知道这些缓存服务的实现。
+
+    实现库 —— 这个库负责实现此标准，从而为任何调用库提供缓存服务。实现库必须提供一个实现了 Psr\SimpleCache\CacheInterface 接口的类。实
+    现库必须至少支持如下所述的 TTL 功能，并具有整秒的粒度。
+
+    TTL —— 一个项目的存活时间（TTL）是指从该项目被存储到它被视为过时之间时间长度。TTL 通常被定义为一个表示时间的整数（以秒为单位）或
+    DateInterval 对象。
+
+    过期 —— 一个项目被设置为过时的实际时间。这通常是通过把 TTL 加到存储一个对象的时间上来计算的。
+
+        一个在 1:30:00 存储的具有 300 秒 TTL 的项目将会在 1:35:00 过期。
+
+        实现库可以在一个项目的请求的到期时间之前就过期该项目，但是一旦在达到一个项目的过期时间，必须将该项目视为已过期。如果调用库要求保存一
+        个项目，但没有指定一个过期时间，或指定了一个空的过期时间或 TTL，那么实现库可以使用一个配置好的默认持续时间。如果没有设置默认持续时间
+        ，则实现库必须将其解释为一个去永久缓存该项目的请求，或者缓存到底层实现能支持到的时间。
+
+        如果提供的 TTL 为负数或零，则必须从缓存中删除该项目，如果它存在的话，因为它已经过期了。
+
+    键 —— 至少有一个字符的字符串，惟一地标识缓存项目。实现库必须支持以 UTF-8 编码任意顺序的字符 A-Z、 a-z、 0-9、_ 和 . 组成的键，并且长
+    度不超过 64 个字符。实现库可以支持额外的字符和编码或者更长的长度，但至少支持这个最低限度。库自己负责酌情转义键字符串，但是必须能够返回原
+    始未修改的键字符串。下面这些字符是为将来的扩展而保留的并且实现库不能支持这些字符：{}()/\@: 。
+
+    缓存 —— 一个实现了 Psr\SimpleCache\CacheInterface 接口的对象。
+
+    缓存未命中 —— 缓存未命中将返回 null，因此要判断一个项目是否存储着 null 是不可能的。这是与 PSR-6 假设的主要偏差。
+
+1.3 缓存
+    实现可以提供一种机制，让用户在没有为特定缓存项目指定默认 TTL 时指定 TTL 。如果没有提供用户指定的默认值，实现必须默认为底层实现所允许的
+    最大合法值。如果底层实现不支持 TTL，那么用户指定的 TTL 必须被静默的忽略。
+
+1.4 数据
+    实现库必须支持所有可序列化的 PHP 数据类型，包括：
+
+    Strings —— 任何 PHP 可兼容编码的任意大小的字符串。
+    Integers —— 所有 PHP 支持的任何大小的整数，最多 64 位有符号。
+    Floats —— 所有有符号浮点型值。
+    Booleans —— 真和假。
+    Null —— 空值（当把它读出来时，虽然它将无法与缓存丢失区分）。
+    Arrays —— 任意深度的索引、关联和多维数组。
+    Object —— 任何支持 $o == unserialize(serialize($o)) 的可无损序列化和反序列化的对象。对象可以利用 PHP 的序列化接口，__sleep()
+    或 __wakeup() 魔术方法，也可以使用类似的语言功能，如果合适的话。
+
+    所有传递进实现库的数据必须完全原样返回。这包括变量的类型。也就是说，如果保存的值是（整型）5，那么返回（字符串）5 是错误的。实现库可以在内
+    部使用 PHP 的 serialize()/unserialize() 函数，但不要求必须这样做。与它们兼容仅用作可接受的对象值的基准线。
+
+    如果由于任何原因无法原样返回被保存的值，实现库必须以缓存未命中而不是以损坏的数据来响应。
+
+2.1 CacheInterface
+    缓存接口定义了缓存记录集合上最基本的操作，它包括基本的读取、写入和删除各个缓存项目。
+
+    此外，它还拥有处理多组缓存记录的方法，例如一次性写入、读取或删除多个缓存记录。当你有大量的缓存读取/写入要运行，这是很有用的，而且让你在到
+    缓存服务器的单次调用中执行多个操作，极大地减少了延迟时间。
+
+    一个 CacheInterface 的实例对应于具有单个键命名空间的单个缓存项目集合，相当于 PSR-6 中的“池”。不同的 CacheInterface 实例可以被相同
+    的数据存储所支持，但必须逻辑上互相独立。
+
+    <?php
+
+    namespace Psr\SimpleCache;
+
+    interface CacheInterface
+    {
+        /**
+         * Fetches a value from the cache.
+         *
+         * @param string $key     The unique key of this item in the cache.
+         * @param mixed  $default Default value to return if the key does not exist.
+         *
+         * @return mixed The value of the item from the cache, or $default in case of cache miss.
+         *
+         * @throws \Psr\SimpleCache\InvalidArgumentException
+         *   MUST be thrown if the $key string is not a legal value.
+         */
+        public function get($key, $default = null);
+
+        /**
+         * Persists data in the cache, uniquely referenced by a key with an optional expiration TTL time.
+         *
+         * @param string                 $key   The key of the item to store.
+         * @param mixed                  $value The value of the item to store. Must be serializable.
+         * @param null|int|\DateInterval $ttl   Optional. The TTL value of this item. If no value is sent and
+         *                                      the driver supports TTL then the library may set a default value
+         *                                      for it or let the driver take care of that.
+         *
+         * @return bool True on success and false on failure.
+         *
+         * @throws \Psr\SimpleCache\InvalidArgumentException
+         *   MUST be thrown if the $key string is not a legal value.
+         */
+        public function set($key, $value, $ttl = null);
+
+        /**
+         * Delete an item from the cache by its unique key.
+         *
+         * @param string $key The unique cache key of the item to delete.
+         *
+         * @return bool True if the item was successfully removed. False if there was an error.
+         *
+         * @throws \Psr\SimpleCache\InvalidArgumentException
+         *   MUST be thrown if the $key string is not a legal value.
+         */
+        public function delete($key);
+
+        /**
+         * Wipes clean the entire cache's keys.
+         *
+         * @return bool True on success and false on failure.
+         */
+        public function clear();
+
+        /**
+         * Obtains multiple cache items by their unique keys.
+         *
+         * @param iterable $keys    A list of keys that can obtained in a single operation.
+         * @param mixed    $default Default value to return for keys that do not exist.
+         *
+         * @return iterable A list of key => value pairs. Cache keys that do not exist or are stale will have $default as value.
+         *
+         * @throws \Psr\SimpleCache\InvalidArgumentException
+         *   MUST be thrown if $keys is neither an array nor a Traversable,
+         *   or if any of the $keys are not a legal value.
+         */
+        public function getMultiple($keys, $default = null);
+
+        /**
+         * Persists a set of key => value pairs in the cache, with an optional TTL.
+         *
+         * @param iterable               $values A list of key => value pairs for a multiple-set operation.
+         * @param null|int|\DateInterval $ttl    Optional. The TTL value of this item. If no value is sent and
+         *                                       the driver supports TTL then the library may set a default value
+         *                                       for it or let the driver take care of that.
+         *
+         * @return bool True on success and false on failure.
+         *
+         * @throws \Psr\SimpleCache\InvalidArgumentException
+         *   MUST be thrown if $values is neither an array nor a Traversable,
+         *   or if any of the $values are not a legal value.
+         */
+        public function setMultiple($values, $ttl = null);
+
+        /**
+         * Deletes multiple cache items in a single operation.
+         *
+         * @param iterable $keys A list of string-based keys to be deleted.
+         *
+         * @return bool True if the items were successfully removed. False if there was an error.
+         *
+         * @throws \Psr\SimpleCache\InvalidArgumentException
+         *   MUST be thrown if $keys is neither an array nor a Traversable,
+         *   or if any of the $keys are not a legal value.
+         */
+        public function deleteMultiple($keys);
+
+        /**
+         * Determines whether an item is present in the cache.
+         *
+         * NOTE: It is recommended that has() is only to be used for cache warming type purposes
+         * and not to be used within your live applications operations for get/set, as this method
+         * is subject to a race condition where your has() will return true and immediately after,
+         * another script can remove it, making the state of your app out of date.
+         *
+         * @param string $key The cache item key.
+         *
+         * @return bool
+         *
+         * @throws \Psr\SimpleCache\InvalidArgumentException
+         *   MUST be thrown if the $key string is not a legal value.
+         */
+        public function has($key);
+    }
+
+2.2 CacheException
+    <?php
+
+    namespace Psr\SimpleCache;
+
+    /**
+     * Interface used for all types of exceptions thrown by the implementing library.
+     */
+    interface CacheException
+    {
+    }
+
+2.3 InvalidArgumentException
+    <?php
+
+    namespace Psr\SimpleCache;
+
+    /**
+     * Exception interface for invalid cache arguments.
+     *
+     * When an invalid argument is passed, it must throw an exception which implements
+     * this interface.
+     */
+    interface InvalidArgumentException extends CacheException
+    {
+    }
+
