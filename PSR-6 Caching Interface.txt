@@ -1,0 +1,346 @@
+缓存是提高任何项目性能的一种常见方法，这使缓存库成为许多框架和库最常见的特性之一。这就造成了这样一种局面：许多库推出了它们自己的、具有不同功能
+级别的缓存库。这些差异导致开发人员不得不去学习多种系统，而这些系统可能也可能没提供他们需要的功能。此外，缓存库的开发人员自己也面临着一个选择，
+是只支持有限数量的框架，还是创建大量的适配器类。
+
+一个缓存系统的通用接口将解决这些问题。库和框架的开发人员可以指望缓存系统按照他们期望的方式工作，而缓存系统的开发人员只需要实现一组接口，而不需
+要实现一组适配器。
+
+本文档中的关键字“必须”，“不能”，“需要”，“将会”，“将不会”，“应该”，“不应该”，“推荐”，“可以”和“可选”是按照 RFC 2119 中的描述进行解释的。
+
+目标
+    这份 PSR 的目标是允许开发人员去创建缓存感知的库，这些库可以集成到现有的框架和系统中，而不需要自定义开发。
+
+定义
+    调用库 —— 实际需要缓存服务的库或者代码。这个库会利用实现了此标准接口的缓存服务，但是却不知道这些缓存服务的实现。
+
+    实现库 —— 这个库负责实现此标准，从而为任何调用库提供缓存服务。实现库必须提供实现了 Cache\CacheItemPoolInterface 和
+    Cache\CacheItemInterface 接口的类。实现库必须至少支持如下所述的 TTL 功能，并具有整秒的粒度。
+
+    TTL —— 一个项目的存活时间（TTL）是指从该项目被存储到它被视为过时之间时间长度。TTL 通常被定义为一个表示时间的整数（以秒为单位）或
+    DateInterval 对象。
+
+    过期 —— 一个项目被设置为过时的实际时间。这通常是通过把 TTL 加到存储一个对象的时间上来计算的，但是也可以用 DateTime 对象显式的设置。一
+    个在 1:30:00 存储的具有 300 秒 TTL 的项目将会在 1:35:00 过期。实现库可以在一个项目的请求的到期时间之前就过期该项目，但是一旦在达到一
+    个项目的过期时间，必须将该项目视为已过期。如果调用库要求保存一个项目，但没有指定一个过期时间，或指定了一个空的过期时间或 TTL，那么实现库
+    可以使用一个配置好的默认持续时间。如果没有设置默认持续时间，则实现库必须将其解释为一个去永久缓存该项目的请求，或者缓存到底层实现能支持到
+    的时间。
+
+    键 —— 至少有一个字符的字符串，惟一地标识缓存项目。实现库必须支持以 UTF-8 编码任意顺序的字符 A-Z、 a-z、 0-9、_ 和 . 组成的键，并且长
+    度不超过 64 个字符。实现库可以支持额外的字符和编码或者更长的长度，但至少支持这个最低限度。库自己负责酌情转义键字符串，但是必须能够返回原
+    始未修改的键字符串。下面这些字符是为将来的扩展而保留的并且实现库不能支持这些字符：{}()/\@: 。
+
+    命中 —— 当调用库使用键请求一个项目并且为该键找到了一个匹配的值，而且这个值没有过期，也没有因为其他的原因无效，就发生了一次缓存命中。调用
+    库应该确保在所有 get() 调用中验证 isHit() 。
+
+    未命中 —— 缓存未命中是缓存命中的反面。当调用库使用键请求一个项目并且没有为该键找到值，或者找到了值但是过期了，或者因为其他的原因该值是无
+    效的，就发生了一次缓存未命中。一个过期的值必须始终被认为是缓存未命中。
+
+    延期 —— 延期缓存保存表示缓存项目不会被池立刻持久化。池对象可以延期持久化一个延期缓存项目，从而可以利用一些存储引擎所支持的批量设置操作。
+    池必须确保任何延期缓存项目最终会被持久化并且数据不会丢失，并且可以在调用库请求把它们持久化之前持久化它们。当调用库调用 commit() 方法时，
+    所有未完成的延期项目都必须被持久化。实现库可以使用任何合适的逻辑去决定何时持久化延期项目，例如对象析构函数、在 save() 上持久化所有内容、
+    一个超时或最大项检查或任何其他合适的逻辑。请求一个已延期的缓存项目必须返回已延期但尚未持久化的项目。
+
+数据
+    实现库必须支持所有可序列化的 PHP 数据类型，包括：
+
+    Strings —— 任何 PHP 可兼容编码的任意大小的字符串。
+    Integers —— 所有 PHP 支持的任何大小的整数，最多 64 位有符号。
+    Floats —— 所有有符号浮点型值。
+    Boolean —— 真和假。
+    Null —— 实际的空值。
+    Arrays —— 任意深度的索引、关联和多维数组。
+    Object —— 任何支持 $o == unserialize(serialize($o)) 的可无损序列化和反序列化的对象。对象可以利用 PHP 的序列化接口，__sleep()
+    或 __wakeup() 魔术方法，也可以使用类似的语言功能，如果合适的话。
+
+    所有传递进实现库的数据必须完全原样返回。这包括变量的类型。也就是说，如果保存的值是（整型）5，那么返回（字符串）5 是错误的。实现库可以在内
+    部使用 PHP 的 serialize()/unserialize() 函数，但不要求必须这样做。与它们兼容仅用作可接受的对象值的基准线。
+
+    如果由于任何原因无法原样返回被保存的值，实现库必须以缓存未命中而不是以损坏的数据来响应。
+
+关键概念
+    池
+        池表示一个缓存系统中的项目集合。池是它所包含的所有项目的一个逻辑仓库。所有可缓存的项目都是以一个项目对象从池中检索出来的，所有与缓存
+        对象的交互都是通过池进行的。
+
+    项目
+        项目表示池中的单个键/值对。键是项目主要的唯一标识符，而且必须是不可变的。值可以随时被改变。
+
+错误处理
+    虽然缓存通常是应用程序性能的重要部分，但它从不应该是应用程序功能的关键部分。因此，缓存系统中的一个错误不应该导致应用程序失败。因此，实现
+    库不能抛出接口定义的异常之外的异常，并且应该捕获由底层数据存储触发的任何错误或异常而且不允许它们冒泡。
+
+    实现库应该记录这些错误，或者根据需要向管理员报告这些错误。
+
+    如果调用库请求删除一个或多个项目或者请求清除一个池，那么如果指定的键不存在，则不能将其视为错误条件。后置条件相同（键不存在，或池是空的）
+    ，因此不存在错误条件。
+
+接口
+    CacheItemInterface
+        CacheItemInterface 定义了缓存系统中的一个项目。每个项目对象必须与特定的键相关联，键可以根据实现系统进行设置，并且通常通过
+        Cache\CacheItemPoolInterface 对象传递。
+
+        Cache\CacheItemInterface 对象封装了缓存项目的存储和检索。每个 Cache\CacheItemInterface 都是由一个
+        Cache\CacheItemPoolInterface 对象生成的，该对象负责所有必需的设置，并将对象与唯一的键相关联。Cache\CacheItemInterface 对象
+        必须能够存储和检索在本文档的数据小节中所定义的任何类型的 PHP 值 。
+
+        调用库自己不能实例化项目对象。只可以通过池对象的 getItem() 方法来请求得到项目对象。调用库不应假定一个实现库创建的项目与另一个实现库
+        创建的池相兼容。
+
+        <?php
+
+        namespace Psr\Cache;
+
+        /**
+         * CacheItemInterface defines an interface for interacting with objects inside a cache.
+         */
+        interface CacheItemInterface
+        {
+            /**
+             * Returns the key for the current cache item.
+             *
+             * The key is loaded by the Implementing Library, but should be available to
+             * the higher level callers when needed.
+             *
+             * @return string
+             *   The key string for this cache item.
+             */
+            public function getKey();
+
+            /**
+             * Retrieves the value of the item from the cache associated with this object's key.
+             *
+             * The value returned must be identical to the value originally stored by set().
+             *
+             * If isHit() returns false, this method MUST return null. Note that null
+             * is a legitimate cached value, so the isHit() method SHOULD be used to
+             * differentiate between "null value was found" and "no value was found."
+             *
+             * @return mixed
+             *   The value corresponding to this cache item's key, or null if not found.
+             */
+            public function get();
+
+            /**
+             * Confirms if the cache item lookup resulted in a cache hit.
+             *
+             * Note: This method MUST NOT have a race condition between calling isHit()
+             * and calling get().
+             *
+             * @return bool
+             *   True if the request resulted in a cache hit. False otherwise.
+             */
+            public function isHit();
+
+            /**
+             * Sets the value represented by this cache item.
+             *
+             * The $value argument may be any item that can be serialized by PHP,
+             * although the method of serialization is left up to the Implementing
+             * Library.
+             *
+             * @param mixed $value
+             *   The serializable value to be stored.
+             *
+             * @return static
+             *   The invoked object.
+             */
+            public function set($value);
+
+            /**
+             * Sets the expiration time for this cache item.
+             *
+             * @param \DateTimeInterface|null $expiration
+             *   The point in time after which the item MUST be considered expired.
+             *   If null is passed explicitly, a default value MAY be used. If none is set,
+             *   the value should be stored permanently or for as long as the
+             *   implementation allows.
+             *
+             * @return static
+             *   The called object.
+             */
+            public function expiresAt($expiration);
+
+            /**
+             * Sets the expiration time for this cache item.
+             *
+             * @param int|\DateInterval|null $time
+             *   The period of time from the present after which the item MUST be considered
+             *   expired. An integer parameter is understood to be the time in seconds until
+             *   expiration. If null is passed explicitly, a default value MAY be used.
+             *   If none is set, the value should be stored permanently or for as long as the
+             *   implementation allows.
+             *
+             * @return static
+             *   The called object.
+             */
+            public function expiresAfter($time);
+
+        }
+
+    CacheItemPoolInterface
+        Cache\CacheItemPoolInterface 接口的主要目的是从调用库接收一个键并且返回相关连的 Cache\CacheItemInterface 对象。它也是与整个
+        缓存集合进行交互的主要地方。池的配置和初始化都留给实现库决定。
+
+        <?php
+
+        namespace Psr\Cache;
+
+        /**
+         * CacheItemPoolInterface generates CacheItemInterface objects.
+         */
+        interface CacheItemPoolInterface
+        {
+            /**
+             * Returns a Cache Item representing the specified key.
+             *
+             * This method must always return a CacheItemInterface object, even in case of
+             * a cache miss. It MUST NOT return null.
+             *
+             * @param string $key
+             *   The key for which to return the corresponding Cache Item.
+             *
+             * @throws InvalidArgumentException
+             *   If the $key string is not a legal value a \Psr\Cache\InvalidArgumentException
+             *   MUST be thrown.
+             *
+             * @return CacheItemInterface
+             *   The corresponding Cache Item.
+             */
+            public function getItem($key);
+
+            /**
+             * Returns a traversable set of cache items.
+             *
+             * @param string[] $keys
+             *   An indexed array of keys of items to retrieve.
+             *
+             * @throws InvalidArgumentException
+             *   If any of the keys in $keys are not a legal value a \Psr\Cache\InvalidArgumentException
+             *   MUST be thrown.
+             *
+             * @return array|\Traversable
+             *   A traversable collection of Cache Items keyed by the cache keys of
+             *   each item. A Cache item will be returned for each key, even if that
+             *   key is not found. However, if no keys are specified then an empty
+             *   traversable MUST be returned instead.
+             */
+            public function getItems(array $keys = array());
+
+            /**
+             * Confirms if the cache contains specified cache item.
+             *
+             * Note: This method MAY avoid retrieving the cached value for performance reasons.
+             * This could result in a race condition with CacheItemInterface::get(). To avoid
+             * such situation use CacheItemInterface::isHit() instead.
+             *
+             * @param string $key
+             *   The key for which to check existence.
+             *
+             * @throws InvalidArgumentException
+             *   If the $key string is not a legal value a \Psr\Cache\InvalidArgumentException
+             *   MUST be thrown.
+             *
+             * @return bool
+             *   True if item exists in the cache, false otherwise.
+             */
+            public function hasItem($key);
+
+            /**
+             * Deletes all items in the pool.
+             *
+             * @return bool
+             *   True if the pool was successfully cleared. False if there was an error.
+             */
+            public function clear();
+
+            /**
+             * Removes the item from the pool.
+             *
+             * @param string $key
+             *   The key to delete.
+             *
+             * @throws InvalidArgumentException
+             *   If the $key string is not a legal value a \Psr\Cache\InvalidArgumentException
+             *   MUST be thrown.
+             *
+             * @return bool
+             *   True if the item was successfully removed. False if there was an error.
+             */
+            public function deleteItem($key);
+
+            /**
+             * Removes multiple items from the pool.
+             *
+             * @param string[] $keys
+             *   An array of keys that should be removed from the pool.
+             *
+             * @throws InvalidArgumentException
+             *   If any of the keys in $keys are not a legal value a \Psr\Cache\InvalidArgumentException
+             *   MUST be thrown.
+             *
+             * @return bool
+             *   True if the items were successfully removed. False if there was an error.
+             */
+            public function deleteItems(array $keys);
+
+            /**
+             * Persists a cache item immediately.
+             *
+             * @param CacheItemInterface $item
+             *   The cache item to save.
+             *
+             * @return bool
+             *   True if the item was successfully persisted. False if there was an error.
+             */
+            public function save(CacheItemInterface $item);
+
+            /**
+             * Sets a cache item to be persisted later.
+             *
+             * @param CacheItemInterface $item
+             *   The cache item to save.
+             *
+             * @return bool
+             *   False if the item could not be queued or if a commit was attempted and failed. True otherwise.
+             */
+            public function saveDeferred(CacheItemInterface $item);
+
+            /**
+             * Persists any deferred cache items.
+             *
+             * @return bool
+             *   True if all not-yet-saved items were successfully saved or there were none. False otherwise.
+             */
+            public function commit();
+        }
+
+    CacheException
+        此异常接口意在发生严重错误时使用，包括但不限于缓存设置，如连接到缓存服务器或提供的无效的凭据。
+
+        任何被实现库抛出的异常都必须实现此接口。
+
+        <?php
+
+        namespace Psr\Cache;
+
+        /**
+         * Exception interface for all exceptions thrown by an Implementing Library.
+         */
+        interface CacheException
+        {
+        }
+
+    InvalidArgumentException
+        <?php
+
+        namespace Psr\Cache;
+
+        /**
+         * Exception interface for invalid cache arguments.
+         *
+         * Any time an invalid argument is passed into a method it must throw an
+         * exception class which implements Psr\Cache\InvalidArgumentException.
+         */
+        interface InvalidArgumentException extends CacheException
+        {
+        }
