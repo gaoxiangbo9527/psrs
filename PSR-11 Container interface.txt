@@ -1,0 +1,98 @@
+这份文档为依赖注入容器描述了一个公共接口。
+
+ContainerInterface 设置的目标是标准化框架和库如何使用一个容器去获取对象和参数（在本文档的其余部分中被称作条目）。
+
+本文档中的关键字“必须”，“不能”，“需要”，“将会”，“将不会”，“应该”，“不应该”，“推荐”，“可以”和“可选”是按照 RFC 2119 中的描述进行解释的。
+
+在这份文档中，单词 implementor 被解释为在依赖注入相关的库或框架中实现 ContainerInterface 的人。依赖注入容器（DIC）的用户称为 user 。
+
+1. 规范
+    1.1 基础
+        1.1.1 条目标识符
+            条目标识符是任意 PHP 合法的、至少有一个字符的字符串，它唯一的标识了容器中的一个条目。条目标识符是一个不透明的字符串，因此调用者
+            不应该假定字符串的结构具有任何语义意义。
+
+        1.1.2 从容器读取
+            Psr\Container\ContainerInterface 公开了两个方法： get 和 has。
+
+            get 接受一个强制性的参数：条目标识符，它必须是一个字符串。get 可以返回任何东西（一个 mixed 值)，或者抛出一个
+            NotFoundExceptionInterface ，如果容器不知道该标识符的话。使用相同的标识符连续两次调用 get 应该返回相同的值。然而，取决于
+            implementor 的设计和/或 user 的配置，可能会返回不同的值，所以 user 不应该依赖于在两次连续的调用中获得相同的值。
+
+            has 接受一个唯一的参数：条目标识符，它必须是一个字符串。如果容器知道某个条目标识符，has 必须返回 true，并且如果不如，则返回
+            false 。如果 has($id) 返回 false，那么 get($id) 必须抛出一个 NotFoundExceptionInterface 。
+
+    1.2 异常
+        由容器直接抛出的异常应该实现 Psr\Container\ContainerExceptionInterface 。
+
+        使用一个不存在的 id 调用 get 方法必须抛出一个 Psr\Container\NotFoundExceptionInterface 。
+
+    1.3 推荐的用法
+        用户不应该将一个容器传递给一个对象以便对象可以检索它自己的依赖项。这么做意味着容器被用作为一个服务定位器，这通常是一种不鼓励的模式。
+
+        请参考 META 文档的第 4 节以了解更多细节。
+
+2. 包
+    已描述的接口和类以及相关的异常都作为 psr/container 包的一部分被提供。
+
+    提供 PSR 容器实现的包应该声明它们提供了 psr/container-implementation 1.0.0 。
+
+    需要一个（PSR 容器）实现的项目应该 require psr/container-implementation 1.0.0。
+
+3. 接口
+    3.1. Psr\Container\ContainerInterface
+    <?php
+    namespace Psr\Container;
+
+    /**
+     * Describes the interface of a container that exposes methods to read its entries.
+     */
+    interface ContainerInterface
+    {
+        /**
+         * Finds an entry of the container by its identifier and returns it.
+         *
+         * @param string $id Identifier of the entry to look for.
+         *
+         * @throws NotFoundExceptionInterface  No entry was found for **this** identifier.
+         * @throws ContainerExceptionInterface Error while retrieving the entry.
+         *
+         * @return mixed Entry.
+         */
+        public function get($id);
+
+        /**
+         * Returns true if the container can return an entry for the given identifier.
+         * Returns false otherwise.
+         *
+         * `has($id)` returning true does not mean that `get($id)` will not throw an exception.
+         * It does however mean that `get($id)` will not throw a `NotFoundExceptionInterface`.
+         *
+         * @param string $id Identifier of the entry to look for.
+         *
+         * @return bool
+         */
+        public function has($id);
+    }
+
+    3.2. Psr\Container\ContainerExceptionInterface
+    <?php
+    namespace Psr\Container;
+
+    /**
+     * Base interface representing a generic exception in a container.
+     */
+    interface ContainerExceptionInterface
+    {
+    }
+
+    3.3. Psr\Container\NotFoundExceptionInterface
+    <?php
+    namespace Psr\Container;
+
+    /**
+     * No entry was found in the container.
+     */
+    interface NotFoundExceptionInterface extends ContainerExceptionInterface
+    {
+    }
