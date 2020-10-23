@@ -1,0 +1,92 @@
+本文档描述了 HTTP 服务器请求处理程序（“请求处理程序”）和 HTTP 服务器中间件组件（“中间件”）的通用接口，它们使用了 PSR-7 或后续替换的 PSRs
+所描述的 HTTP 消息。
+
+HTTP 请求处理程序是任何 web 应用程序的一个基本部分。服务端代码接收一个请求消息，处理它，然后产生一个响应消息。HTTP 中间件是一种将请求和响应
+的常见处理移出应用层的方法。
+
+本文档中所描述的接口是请求处理程序和中间件的抽象。
+
+注意：所有对“请求处理程序”和“中间件”的引用都是特定于 服务器请求 处理的。
+
+本文档中的关键字“必须”，“不能”，“需要”，“将会”，“将不会”，“应该”，“不应该”，“推荐”，“可以”和“可选”是按照 RFC 2119 中的描述进行解释的。
+
+参考
+    PSR-7
+    RFC 2119
+
+1. 规范
+    1.1 请求处理程序
+        请求处理程序是一个独立的组件，它处理一个请求并产生一个响应，正如 PSR-7 所定义的。
+
+        如果请求条件阻止请求处理程序产生一个响应，那么请求处理程序可以抛出一个异常。该异常的类型是没有定义的。
+
+        使用此标准的请求处理程序必须实现以下接口：
+            Psr\Http\Server\RequestHandlerInterface
+
+    1.2 中间件
+        中间件组件是一个单独的组件，通常与其他中间件组件一起参与传入请求的处理和结果响应的创建，正如 PSR-7 所定义的。
+
+        如果满足充分条件，中间件组件可以创建并返回一个响应，而无需委托一个请求处理程序。
+
+        使用此标准的中间件必须实现以下接口：
+            Psr\Http\Server\MiddlewareInterface
+
+    1.3 生成响应
+        为了防止依赖于一个特定的 HTTP 消息实现，推荐生成响应的任何中间件或请求处理程序要么产生一个 PSR-7 ResponseInterface 的原型，要么
+        产生一个能够生成 ResponseInterface 实例的工厂。
+
+    1.4 处理异常
+        推荐使用中间件的任何应用程序都包含一个能捕获异常并将其转换为响应的组件。此中间件应该是第一个被执行的组件，并包围了所有的后续处理以确
+        保始终生成一个响应。
+
+2. 接口
+    2.1 Psr\Http\Server\RequestHandlerInterface
+        下面的接口必须被请求处理程序实现。
+
+        namespace Psr\Http\Server;
+
+        use Psr\Http\Message\ResponseInterface;
+        use Psr\Http\Message\ServerRequestInterface;
+
+        /**
+         * 处理一个服务器请求并产生一个响应。
+         *
+         * HTTP 请求处理程序处理一个 HTTP 请求以产生一个
+         * HTTP 响应。
+         */
+        interface RequestHandlerInterface
+        {
+            /**
+             * 处理一个请求并产生一个响应。
+             *
+             * 可以调用其他的协作代码以生成响应。
+             */
+            public function handle(ServerRequestInterface $request): ResponseInterface;
+        }
+
+    2.2 Psr\Http\Server\MiddlewareInterface
+        下面的接口必须被兼容的中间件组件实现。
+
+        namespace Psr\Http\Server;
+
+        use Psr\Http\Message\ResponseInterface;
+        use Psr\Http\Message\ServerRequestInterface;
+
+        /**
+         * 参与服务器请求和响应的处理。
+         *
+         * HTTP 中间件组件参与处理一个 HTTP 消息：
+         * 通过对请求进行操作，生成响应，或者转发该
+         * 请求到后续中间件并可能对其响应进行操作。
+         */
+        interface MiddlewareInterface
+        {
+            /**
+             * 处理传入的服务器请求。
+             *
+             * 处理一个传入的服务器请求以产生一个响应。
+             * 如果它自身不能产生响应，它可以委托所提供的
+             * 请求处理程序来生成响应。
+             */
+            public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface;
+        }
